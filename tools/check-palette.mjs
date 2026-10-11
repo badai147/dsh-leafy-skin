@@ -48,7 +48,8 @@ function contrast(fg, bg) {
   return (hi + 0.05) / (lo + 0.05)
 }
 
-const tokens = extractTokens(await readFile(CLIENT, 'utf8'))
+const source = await readFile(CLIENT, 'utf8')
+const tokens = extractTokens(source)
 
 // ── 1. 形状校验 ────────────────────────────────────────────────────────────────
 const problems = []
@@ -166,6 +167,41 @@ for (const mode of ['light', 'dark']) {
   }
   const comment = contrast(value('--shiki-token-comment', mode), bg)
   console.log(`${comment.toFixed(2).padStart(6)}  弱化    ${mode} --shiki-token-comment（注释刻意低对比）`)
+}
+
+// ── 4. 样式层（3D）自检 ────────────────────────────────────────────────────────
+// 样式层是唯一"依赖组件实现细节"的地方，所以两条底线机械化把关：
+//   ① 不允许类选择器（哈希类名升级即失效，普通类名我们也用不着）；
+//   ② 不允许 !important。
+// 顺带校验大括号/圆括号配平，避免字符串拼错导致样式静默失效。
+function extractCssLayer(text) {
+  const start = text.indexOf('const CSS_LAYER = [')
+  if (start === -1) return null
+  const open = text.indexOf('[', start)
+  const end = text.indexOf('].join("")', open)
+  if (end === -1) throw new Error('CSS_LAYER 数组没有以 ].join("") 收尾')
+  return new Function(`return ${text.slice(open, end + 1)}.join("")`)()
+}
+
+const css = extractCssLayer(source)
+console.log('\n样式层（3D）自检：')
+if (css === null) {
+  console.log('  未找到 CSS_LAYER（只有 token 层）')
+} else {
+  const balanced = (s, a, b) => (s.match(new RegExp(`\\${a}`, 'g')) ?? []).length === (s.match(new RegExp(`\\${b}`, 'g')) ?? []).length
+  const classSelectors = [...css.matchAll(/\.[A-Za-z][\w-]*/g)].map((m) => m[0])
+  const checks = [
+    ['大括号配平', balanced(css, '{', '}')],
+    ['圆括号配平', balanced(css, '(', ')')],
+    ['无 !important', !css.includes('!important')],
+    ['无类选择器', classSelectors.length === 0],
+  ]
+  for (const [label, ok] of checks) {
+    console.log(`  ${ok ? 'OK  ' : 'FAIL'}  ${label}`)
+    if (!ok) failures++
+  }
+  if (classSelectors.length > 0) console.error(`        发现类选择器：${classSelectors.join(', ')}`)
+  console.log(`  样式层长度：${css.length} 字符`)
 }
 
 if (failures > 0) {

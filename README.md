@@ -15,10 +15,33 @@ DSH 的界面颜色全部来自 `@deepseek-ai/dsh-client-ui-theme` 里的 token 
   绿灰色阶、翡翠/薄荷强调色阶、表面、文字、品牌与选中、代码块与滚动条、交互叠色、
   思考块渐变、状态点与引导页、代码语法高亮、圆角与阴影描边、排版与动效；
 - Host 侧（`lib/index.js`）另外往 index 响应里追加一段首帧 CSS：ui-theme 的引导样式把画布
-  底色与 `--dsh-boot-bg` 写死成 `#fff`/`#151517`，插件起来之前的第一帧要靠它才不会闪白。
+  底色与 `--dsh-boot-bg` 写死成 `#fff`/`#151517`，插件起来之前的第一帧要靠它才不会闪白；
+- 另外有一层可选的**样式层**（见下节），补 token 管不到的细节；开关在 `lib/client.js`
+  顶部的 `ENABLE_CSS_LAYER`，改成 `false` 就只剩 token 层。
 
 调色原则：不纯白不纯黑（大面积降到 L\*≈96 减少眩光）、色相统一在绿系、正文/次要文字守住
 WCAG AA、语义色（错误红/警告黄/成功绿）保持不变。
+
+## 样式层（3D，可关）
+
+有些细节没有任何 token 可改，只能用 CSS。这一层只做三件事：
+
+1. **文本选中高亮**：官方全包只有 PDF 文本层和 xterm 无障碍树定义了 `::selection`，
+   普通文本选区一直是 Chromium 默认的浅蓝——皮肤里最后一块非绿（薄荷选区 `#B9E8CE`，
+   深色 `#2E5B44`，选中文字对比度 13.8:1 / 6.8:1）；
+2. **交互控件过渡**：官方组件有 39 处 `:hover` 但只有 16 处 `transition`，
+   给按钮/链接/输入框/菜单补上 160–200ms 的背景、边框、颜色、阴影过渡；
+3. **菜单入场**：`[data-menu-material]`（官方公开钩子，app 里 4 处使用）淡入 140ms；
+   只做透明度不做位移/缩放——transform 会新建包含块，可能影响菜单里 fixed 浮层的定位。
+
+三条硬约束，由 `tools/check-palette.mjs` 机械校验（防止以后手滑破坏）：
+
+- 只用元素选择器与官方公开钩子，**不用任何类选择器**（哈希类名升级即失效）；
+- 一律套 `:where()` 归零特异性，组件自己写的 `transition`/`animation` 永远优先；
+- 不用 `!important`；并且尊重系统的 `prefers-reduced-motion`。
+
+样式以字符串内联在 `lib/client.js` 里（官方 ui-theme 也是这么内联自己的样式表的）：
+外置 `.css` 需要引入打包/取资源步骤，与"零构建"原则冲突。
 
 ## 目录结构
 
@@ -26,8 +49,8 @@ WCAG AA、语义色（错误红/警告黄/成功绿）保持不变。
 package.json          # dsh.bundle.patch + dsh.client.inject，零依赖零构建
 cordis.patch.yml      # 把插件插入 profile 的 layer stack
 lib/index.js          # Host 侧入口：向 webserver/index-inject 追加首帧引导 CSS
-lib/client.js         # 客户端 bundle：手写 __ModuleLoader__ 工厂 + TOKENS 调色板
-tools/check-palette.mjs  # 开发自检：token 形状 + 文字/语法高亮对比度
+lib/client.js         # 客户端 bundle：TOKENS 调色板 + 可关的样式层（CSS_LAYER）
+tools/check-palette.mjs  # 开发自检：token 形状、对比度、样式层约束
 ```
 
 ## 安装 / 停用
@@ -50,7 +73,8 @@ tools/check-palette.mjs  # 开发自检：token 形状 + 文字/语法高亮对�
 ## 改色流程
 
 1. 改 `lib/client.js` 里的 `TOKENS`（每个分组前都有注释说明它管哪些部位）；
-2. `node tools/check-palette.mjs` —— 校验形状并复核关键文字/底色、语法高亮的对比度；
+2. `node tools/check-palette.mjs` —— 校验 token 形状、关键文字/底色与语法高亮的对比度、
+   以及样式层的三条约束；
 3. 看效果：客户端 bundle 由 `dsh-client-hmr` 每 500ms stat 轮询一次（入口的 mtime/ctime/size），
    写完通常 1 秒内页面自动热替换，必要时手动刷新一次。
 
