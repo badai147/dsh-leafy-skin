@@ -62,7 +62,8 @@ hard-code colours — so a skin is a client plugin that:
 - stacks 112 tokens over the active theme through `ctx.theme.overrideTokens(...)`. Values are
   `{ light, dark }` pairs, so switching colour schemes just works;
 - adds a small CSS layer for what tokens cannot reach: text selection, transition defaults for
-  elements that only declare `:hover`, and menu entrance;
+  elements that only declare `:hover`, menu entrance, and composer focus feedback — an accent
+  caret plus a soft ring that lifts the input card with shadow rather than movement;
 - injects one `<style>` from the host side so the very first frame is already green.
 
 No build step and no dependencies: `lib/client.js` is a hand-written `__ModuleLoader__` factory.

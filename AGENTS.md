@@ -21,8 +21,12 @@ token 够不到的细节。插件名即目录名，形态照 `dsh-global-rules` 
 
 1. **token 值必须是 `{ light, dark }` 成对字符串**，裸字符串会被 `overrideTokens` 直接抛错，
    深/浅色其中一档也会不可读。
-2. **样式层不许出现类选择器**（哈希类名如 `.BynINW_frame` 升级即失效），只用元素与官方公开钩子
-   （`[data-menu-material]`、`[role=...]`、`::selection`、`prefers-reduced-motion` 等）。
+2. **样式层不许出现类选择器**（哈希类名如 `.BynINW_frame` 升级即失效），只用元素与官方公开钩子。
+   已确认可用的稳定钩子（都来自官方 JSX 里刻意加的 `data-*` 或 role）：
+   `[data-composer-card]`（输入卡片）、`[data-composer-input]`（Lexical 编辑区）、
+   `[data-input-scroll]`、`[data-composer-placeholder]`、`[data-menu-material]`（菜单/浮层）、
+   `[data-menu-backing]`、`[role=...]`、`::selection`、`prefers-reduced-motion`。
+   反例：`.RlGAzG_card`、`.BynINW_frame` 这类哈希类名一律不许出现。
 3. **样式层一律套 `:where()` 归零特异性**：组件自己写的 `transition`/`animation` 必须永远优先，
    我们只补"组件没写"的空白。不加 `!important`。
 4. **语义色不动**：错误红、警告黄、成功绿保持官方值。全绿会丢掉状态可读性。
@@ -55,6 +59,13 @@ node tools/check-palette.mjs
   所以用 `:where(*)` 的零特异性全局兜底。
 - 菜单定位走 inline `top/left`（`.portal`），不用 transform —— 这是"可以安全动
   translate/scale"的前提，改前先复核。
+- **输入框不是 `<textarea>`**：composer 是 Lexical 的 `contenteditable`（`[data-composer-input]`、
+  `role="textbox"`、`aria-multiline`），拿到卡片的是 `[data-composer-card]`。所有输入框相关的
+  玩法都从这两个属性入手（`caret-color` 对 contenteditable 同样有效）。
+- **别给 `[data-composer-card]` 加 translate/transform/scale**：卡片里可能挂 `position: fixed`
+  的浮层（提示条、下拉），一旦它有 transform，这些浮层会改用卡片当参照系、坐标整块飞掉。
+  "抬升感"一律用阴影表达（现有做法：`::after` 上叠一圈柔光 + 一小片彩色下阴影）。
+  同理，任何"想动 transform"的容器，先确认里面没有 fixed 浮层。
 
 ## 命令
 
