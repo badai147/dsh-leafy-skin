@@ -1,114 +1,90 @@
 # dsh-leafy-skin
 
-护眼绿叶皮肤：把 DSH Web GUI 的 `--dsw-*` 设计 token 调色板叠成叶绿系（浅色 + 深色）。
+An eye-friendly green skin for the DeepSeek Harness web GUI: a leafy palette layered over the
+official theme tokens, in light and dark variants.
 
-## 它做什么
+**English** | [中文](README.zh.md)
 
-DSH 的界面颜色全部来自 `@deepseek-ai/dsh-client-ui-theme` 里的 token 样式表，组件只读
-`--dsw-alias-*` / `--dsw-specific-*` 这类变量，不写死颜色。本插件通过官方的扩展点
-`ctx.theme.overrideTokens(source, tokens)` 在**当前主题之上**叠一层调色板覆盖：
+> 📷 **Screenshot — coming soon.**
 
-- token 值必须是 `{ light, dark }` 成对字符串，ui-layout 会把它们作为 inline style 写到
-  `<body>` 上，所以优先级高于任何样式表，切浅色/深色/跟随系统时自动取对应那一档；
-- 覆盖层由插件持有，插件卸载/热更新时自动摘除，官方配色即可恢复；
-- 目前覆盖 116 个 token，分 12 组（见 `lib/client.js` 里 `TOKENS` 的分组注释）：
-  绿灰色阶、翡翠/薄荷强调色阶、表面、文字、品牌与选中、代码块与滚动条、交互叠色、
-  思考块渐变、状态点与引导页、代码语法高亮、圆角与阴影描边、排版与动效；
-- Host 侧（`lib/index.js`）另外往 index 响应里追加一段首帧 CSS：ui-theme 的引导样式把画布
-  底色与 `--dsh-boot-bg` 写死成 `#fff`/`#151517`，插件起来之前的第一帧要靠它才不会闪白；
-- 另外有一层可选的**样式层**（见下节），补 token 管不到的细节；开关在 `lib/client.js`
-  顶部的 `ENABLE_CSS_LAYER`，改成 `false` 就只剩 token 层。
+<!-- 截图就绪后，把上面那行替换成图片（建议放到 docs/）：
+![Leafy skin — light mode](docs/light.png)
+![Leafy skin — dark mode](docs/dark.png)
+-->
 
-调色原则：不纯白不纯黑（大面积降到 L\*≈96 减少眩光）、色相统一在绿系、正文/次要文字守住
-WCAG AA、语义色（错误红/警告黄/成功绿）保持不变。
+## Features
 
-## 样式层（3D，可关）
+- **Layered greens** — a mist-green canvas, raised panels, a deeper sidebar, and emerald accents
+  (light) / mint accents (dark) instead of one flat wash of green.
+- **Comfortable by construction** — no pure white or pure black, a single green hue family, and
+  all body text at WCAG AA (≥ 4.5:1).
+- **Texture** — softer corner radii, green-tinted diffuse shadows, low-contrast hairlines, and
+  glassy menus.
+- **Details** — mint text selection, Inter / Noto Sans SC / Cascadia Code in the font stacks,
+  slimmer scrollbars, and gentle hover and menu motion.
+- **Tunable** — the palette is one commented table, a self-check script guards contrast, and the
+  CSS layer has a single on/off switch.
 
-有些细节没有任何 token 可改，只能用 CSS。这一层只做三件事：
+## Install
 
-1. **文本选中高亮**：官方全包只有 PDF 文本层和 xterm 无障碍树定义了 `::selection`，
-   普通文本选区一直是 Chromium 默认的浅蓝——皮肤里最后一块非绿（薄荷选区 `#B9E8CE`，
-   深色 `#2E5B44`，选中文字对比度 13.8:1 / 6.8:1）；
-2. **全局过渡兜底**：官方组件有 39 处 `:hover` 但只有 16 处 `transition`，而且不少可点区域
-   是 `div`（行、卡片、菜单项）——所以做成 `:where(*)` 的零特异性兜底，只过渡"变色/淡入"类
-   属性（背景、边框、文字、图标、透明度），绝不碰尺寸与位移；控件另外补阴影与按下形变。
-   曲线用 easeOutQuad `cubic-bezier(.25,.46,.45,.94)`、时长 200ms；
-3. **菜单入场**：`[data-menu-material]`（官方公开钩子，app 里 4 处使用）160ms 的
-   `translate(0,-3px) → 0` + `scale(.985) → 1`，**全程 opacity 保持 1**。
-
-> 手感调优记录（两次返工，都是实测出来的）：
->
-> - 第一版是"点名几个表单控件"、160ms、曲线 `cubic-bezier(.2,0,0,1)`，手感生硬——
->   兜底范围太窄（大量 div 行/卡片没被覆盖），而那条曲线起步速度为零，短时长下观感就是
->   "先不动再猛走"。改成 `:where(*)` 全局兜底 + easeOutQuad / 200ms。
-> - 第二版菜单用**透明度淡入**，被一眼看出"先透明再变实"：菜单底色是独立子层 `.material`
->   上的 `--dsw-menu-surface-fill`（浅色仅 58% 不透明）+ backdrop blur，按透明度淡入时
->   中间帧是"模糊按全强度算、却按半透明合成"。改成只动 `translate`/`scale` 后每一帧都是
->   实心的。顺带确认：菜单定位走 inline `top/left`（`.portal`）而非 transform，所以
->   动 transform 不会把位置顶歪；用独立的 `translate`/`scale` 属性还能与调用方的
->   inline `transform` 叠加而不是互相覆盖。
-> - 3C 曾把官方动效变量 `--ds-ease-in-out` 一并改快，也已回退：那几个变量是给侧栏收放
->   这类尺寸动画用的，官方取值本来就是为它们调的。
-
-三条硬约束，由 `tools/check-palette.mjs` 机械校验（防止以后手滑破坏）：
-
-- 只用元素选择器与官方公开钩子，**不用任何类选择器**（哈希类名升级即失效）；
-- 一律套 `:where()` 归零特异性，组件自己写的 `transition`/`animation` 永远优先；
-- 不用 `!important`；并且尊重系统的 `prefers-reduced-motion`（只关我们兜底的那部分）。
-
-样式以字符串内联在 `lib/client.js` 里（官方 ui-theme 也是这么内联自己的样式表的）：
-外置 `.css` 需要引入打包/取资源步骤，与"零构建"原则冲突。
-
-## 目录结构
-
-```
-package.json          # dsh.bundle.patch + dsh.client.inject，零依赖零构建
-cordis.patch.yml      # 把插件插入 profile 的 layer stack
-lib/index.js          # Host 侧入口：向 webserver/index-inject 追加首帧引导 CSS
-lib/client.js         # 客户端 bundle：TOKENS 调色板 + 可关的样式层（CSS_LAYER）
-tools/check-palette.mjs  # 开发自检：token 形状、对比度、样式层约束
-AGENTS.md             # 本仓库的干活须知（硬约束、踩坑记录、命令、边界）
-.gitattributes        # 换行统一 LF
-```
-
-动手改之前建议先看 `AGENTS.md`：硬约束、动效踩坑记录、必跑的验证都在里面。
-
-## 安装 / 停用
-
-安装（写入 profile 的 dependencies 与 `dsh.profile.bundles`）：
+Needs the DSH desktop app. From your checkout of this repo:
 
 ```powershell
 & "$env:LOCALAPPDATA\Programs\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd" `
-  plugin --profile desktop add C:\Users\badai\projects2\dsh-leafy-skin
+  plugin --profile desktop add C:\path\to\dsh-leafy-skin
 ```
 
-首次安装后需要重启 DSH 让 profile 重新组合；之后只改颜色的话，改完文件刷新页面即可。
+Restart DSH once so the profile recomposes. Afterwards, colour edits only need a page refresh
+(client changes hot-reload within about a second).
 
-停用（任选其一，都需要重启）：
+## Uninstall
 
-1. 把本文件 `cordis.patch.yml` 的 insert 行注释掉；
-2. 从 `~/.dsh/profiles/desktop/package.json` 的 `dsh.profile.bundles` 里删掉 `dsh-leafy-skin`；
-3. `dsh plugin --profile desktop remove dsh-leafy-skin`。
+Any one of these, then restart DSH:
 
-## 改色流程
+1. Comment out the `insert` entry in `cordis.patch.yml`;
+2. Drop `dsh-leafy-skin` from `dsh.profile.bundles` in `~/.dsh/profiles/desktop/package.json`;
+3. Run `dsh plugin --profile desktop remove dsh-leafy-skin`.
 
-1. 改 `lib/client.js` 里的 `TOKENS`（每个分组前都有注释说明它管哪些部位）；
-2. `node tools/check-palette.mjs` —— 校验 token 形状、关键文字/底色与语法高亮的对比度、
-   以及样式层的三条约束；
-3. 看效果：客户端 bundle 由 `dsh-client-hmr` 每 500ms stat 轮询一次（入口的 mtime/ctime/size），
-   写完通常 1 秒内页面自动热替换，必要时手动刷新一次。
+To keep the palette but drop the CSS layer, set `ENABLE_CSS_LAYER = false` in `lib/client.js`.
 
-注意 `lib/index.js`（首帧 CSS）属于 Host 侧：profile 的 `hmr` 配置里 `root: []`，模块根是 opt-in 的，
-所以 Host 代码改动不热重载，改完要重启 DSH 才生效。
+## Customize
 
-## 已知边界（插件改不到的地方）
+- **Colours** — the `TOKENS` table in `lib/client.js`, grouped and commented by area.
+- **Radii, shadows, fonts, motion** — the same file, plus the small CSS layer below it.
+- **Check your work** — `node tools/check-palette.mjs` validates token shape, text and syntax
+  contrast, and the CSS layer's constraints.
 
-- Windows 原生标题栏 overlay 的颜色由桌面 shell 进程写死（浅色 `#f9fafb` / 深色 `#1b1b1c`，
-  见 `lib/main.js` 的 `chromeFallbackFill()`），插件层够不着；页面加载完成后那条标题栏
-  由前端用 `--dsw-specific-sidebar-fill` 重画，所以只有加载瞬间是官方灰白。
-- macOS 标题栏那层蓝紫渐变写在 ui-layout 的样式表里（Windows 走
-  `--dsw-specific-sidebar-fill`，不受影响）；`--dsw-desktop-window-tint` 属于桌面 shell
-  自己的欢迎页/更新弹窗文档，不在 Web GUI 文档里。
-- 品牌 logo、鲸鱼图标等图片资源不在 token 层。
-- 纯 neutral 灰阶（`--dsw-static-neutral-*`）只在代码块内联底色、滚动条、空闲状态点用到，
-  这三处已逐个用别名覆盖；其余保持官方中性灰，避免影响阴影与遮罩。
+## How it works
+
+DSH themes are plain CSS custom properties (`--dsw-*`) resolved on `<body>` — components never
+hard-code colours — so a skin is a client plugin that:
+
+- stacks 112 tokens over the active theme through `ctx.theme.overrideTokens(...)`. Values are
+  `{ light, dark }` pairs, so switching colour schemes just works;
+- adds a small CSS layer for what tokens cannot reach: text selection, transition defaults for
+  elements that only declare `:hover`, and menu entrance;
+- injects one `<style>` from the host side so the very first frame is already green.
+
+No build step and no dependencies: `lib/client.js` is a hand-written `__ModuleLoader__` factory.
+
+## Limitations
+
+- The native window title bar belongs to the DSH shell, not to this plugin, so it stays DSH grey
+  for the instant before the page paints.
+- Real see-through glass is impossible on Windows — the sidebar depth and translucent menus are
+  colour layering, not blur through the window.
+- Components hard-code font sizes and layout in hashed CSS modules, so this skin deliberately
+  leaves them alone.
+
+## Contributing
+
+Issues are welcome: bug reports, colour suggestions, and screenshots of anything that looks off.
+
+**Pull requests are not accepted** — this is a personal skin, and reviewing patches would cost
+more than it returns. Please open an issue instead.
+
+<!-- TODO: 配好远端后补上 issue 链接，例如 https://github.com/<you>/dsh-leafy-skin/issues -->
+
+## License
+
+[MIT](LICENSE)
