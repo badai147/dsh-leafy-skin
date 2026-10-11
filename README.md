@@ -67,7 +67,11 @@ cordis.patch.yml      # 把插件插入 profile 的 layer stack
 lib/index.js          # Host 侧入口：向 webserver/index-inject 追加首帧引导 CSS
 lib/client.js         # 客户端 bundle：TOKENS 调色板 + 可关的样式层（CSS_LAYER）
 tools/check-palette.mjs  # 开发自检：token 形状、对比度、样式层约束
+AGENTS.md             # 本仓库的干活须知（硬约束、踩坑记录、命令、边界）
+.gitattributes        # 换行统一 LF
 ```
+
+动手改之前建议先看 `AGENTS.md`：硬约束、动效踩坑记录、必跑的验证都在里面。
 
 ## 安装 / 停用
 

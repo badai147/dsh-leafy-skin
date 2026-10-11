@@ -1,0 +1,19 @@
+# 统一换行：仓库内一律 LF。
+#
+# 本机 core.autocrlf=true，会把检出转成 CRLF 并一路告警（"LF will be replaced by
+# CRLF the next time Git touches it"）。eol=lf 覆盖 autocrlf：索引与工作区都保持
+# LF，跨平台一致，也不再刷告警。
+* text=auto eol=lf
+
+# 二进制：不做换行/文本处理（后续若加入字体、图片、压缩包）
+*.woff2 binary
+*.woff  binary
+*.ttf   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.icns  binary
+*.zip   binary
+*.exe   binary
