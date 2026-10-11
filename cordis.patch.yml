@@ -1,0 +1,5 @@
+# dsh bundle patch: 把本插件插入 profile 的 layer stack。
+# 摘掉下面这一行（或整行注释掉）即可停用皮肤，见 README 的回滚说明。
+- insert:
+    - id: leafy-skin
+      name: 'dsh-leafy-skin'
