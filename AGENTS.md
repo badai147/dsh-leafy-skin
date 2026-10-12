@@ -26,7 +26,9 @@ DSH Web GUI 的**护眼绿叶皮肤插件**：在**当前主题之上**叠一层
    `[data-input-scroll]`、`[data-composer-placeholder]`、`[data-menu-material]`（菜单/浮层）、
    `[data-menu-backing]`、`[role=...]`。
 3. **样式层一律套 `:where()` 归零特异性**，不加 `!important`：组件自己写的
-   `transition`/`animation` 永远优先，我们只补它没写的空白。
+   `transition`/`animation` 永远优先，我们只补它没写的空白。唯一例外是侧栏收放那两个
+   `--ds-*` 变量的覆盖——它不是抢属性，而是在动画期间改写官方规则读取的变量取值，
+   作用域锁死在本次动画（见踩坑记录）。
 4. **语义色不动**：错误红、警告黄、成功绿保持官方值，全绿会丢掉状态可读性。
 5. **对比度底线 ≥ 4.5:1（AA）**：正文 / 次要 / 三级文字与语法高亮；caption 与代码注释是刻意的
    弱化档，改动时必须在注释里写明"刻意"。
@@ -57,8 +59,25 @@ node tools/check-palette.mjs
   （浅色仅 58% 不透明）+ `backdrop-filter`，淡入的中间帧是"模糊按全强度算、却按半透明合成"，
   肉眼能看到"先透一层糊、再变实"。入场只动 `translate`/`scale`（用独立属性，别用 `transform`
   简写），opacity 保持 1。
-- **官方动效变量别乱改**（`--ds-ease-in-out`、`--ds-transition-duration*`）：它们是给侧栏收放这类
-  尺寸动画用的，改快会让侧栏开合发顿。过渡手感归样式层管，两者职责分开。
+- **官方动效变量别在全局改**（`--ds-ease-in-out`、`--ds-transition-duration*`）：它们定义在 `:root`
+  上，全局改会连带 tooltip、模态、侧栏内容动画一起变，而且实测"改快"会让侧栏开合发顿。正确姿势是
+  **只在动画期间改**：`:where([data-animating]){--ds-transition-duration-slow:…;--ds-ease-in-out:…}`。
+  这不是抢属性，而是改写官方规则读取的变量取值，所以 `:where()` 的零特异性照样生效——变量由框架
+  元素自己解析，而**继承永远打不过元素上的任何声明**。作用域天然锁死在本次收放（tooltip 与模态
+  portal 到 body，在框架之外拿不到）。现在用的是 `.36s cubic-bezier(.22,1,.36,1)`（easeOutQuint，
+  起步即全速、尾段长而软）。**时长别超 ~400ms**：框架除 `transitionend` 还有 600ms 兜底定时器，
+  超了会在半路摘掉 `data-animating`，变量回退让过渡跳一下。
+- **锚定弹窗（统计 / 上下文占用）官方零动画**：它们是 `createPortal` 到 body 的 `div[role=dialog]`，
+  按 inline `left/top` 定位（`useAnchoredPosition` 只返回 left/top，不是 transform），所以位移安全；
+  面板是 58% 不透明 + `backdrop-filter` 的玻璃面，只能 `translate`/`scale`，别 opacity 淡入。
+  用 `:not([aria-modal])` 排除带遮罩的全屏模态（它们自己有 `_modalEnter`，类选择器特异性更高，
+  我们本来也覆盖不了）。关闭方向没动画可做：React 直接卸载，做出场得 JS 延迟卸载，不值当。
+- **会话切换的"重放"要么靠状态迁移，要么靠卸载重挂**：phase 挂在 `[data-phase]` /
+  `[data-content-phase]` 上（`active`/`hero`/`settling`）。切到未加载的会话会走 `settling→active`，
+  且视图区在 `session.blank && phase==="blank"` 时直接 `return null`（整个卸载重挂），所以规则会
+  重新匹配、动画自然重放。**已知缺口**：两个 summary 都已就绪的会话互切时两者可能都不发生（不
+  触发）——要全覆盖就得给 `[data-chat-flow-key]` 挂逐条入场（排除 `[data-chat-flow-kind=turn-process]`），
+  代价是新消息、工具行也会各自动一下。消息区是实心文字、没有玻璃面，这里动 opacity 是安全的。
 - **兜底范围要够大**：DSH 里大量可点区域是 `div`（列表行、卡片、菜单项），只兜表单控件不够，
   所以用 `:where(*)` 的零特异性全局兜底。
 - **菜单定位走 inline `top/left`（`.portal`），不用 transform**——这是"可以安全动 translate/scale"

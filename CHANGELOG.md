@@ -4,6 +4,25 @@
 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循
 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [未发布]
+
+### 新增
+
+- **锚定弹窗入场**——会话 / 回合统计与"上下文占用"面板点开是一帧蹦出来的（官方这套 `role=dialog`
+  面板零动画）。现在从触发器方向上浮 4px + 缩放 .985→1（160ms）；面板是半透明玻璃面，全程
+  opacity 保持 1，不出现"先透一层糊、再变实"。
+- **会话切换内容入场**——切换会话时消息区淡入 + 上浮 4px（200ms easeOutQuint）。靠
+  `[data-phase]` / `[data-content-phase]` 的 `settling→active` 迁移与视图区卸载重挂自然重放，
+  零 JS。
+- **侧栏收放曲线**——官方 `grid-template-columns .3s cubic-bezier(.4,0,.2,1)`（起步速度为零）
+  换成 `.36s cubic-bezier(.22,1,.36,1)`（easeOutQuint，起步即全速、落地绵长）。只在动画期间
+  （`[data-animating]`）改写官方读取的变量取值，tooltip、模态、主按钮等不受影响。
+
+### 文档
+
+- `AGENTS.md` 踩坑记录补三条：官方锚定弹窗零动画、官方动效变量只在动画期覆盖、会话切换的
+  重放机制与已知缺口。
+
 ## [0.1.0] - 2026-10-11
 
 首个可用版本。皮肤 = token 层（112 个 `--dsw-*` 覆盖，浅色翡翠 / 深色薄荷）
