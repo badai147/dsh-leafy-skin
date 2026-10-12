@@ -4,95 +4,82 @@
 
 ## 这是什么
 
-DSH Web GUI 的**护眼绿叶皮肤插件**：`@deepseek-ai/dsh-client-ui-theme` 提供 token 机制，
-本插件在**当前主题之上**叠一层调色板覆盖（浅色翡翠 / 深色薄荷），外加一层可关的样式层补
-token 够不到的细节。插件名即目录名，形态照 `dsh-global-rules` 那套：`dsh.bundle.patch` +
-`dsh.client` + 手写 `__ModuleLoader__` 工厂，**零依赖、零构建**。
+DSH Web GUI 的**护眼绿叶皮肤插件**：在**当前主题之上**叠一层调色板覆盖（浅色翡翠 / 深色薄荷），
+外加一层可关的样式层补 token 够不到的细节。形态照 `dsh-global-rules` 那套：`dsh.bundle.patch`
++ `dsh.client` + 手写 `__ModuleLoader__` 工厂，**零依赖、零构建**。
 
-## 三层结构与边界
+## 三层结构与生效方式
 
 | 层 | 位置 | 机制 | 生效方式 |
 |---|---|---|---|
-| token 层 | `lib/client.js` 的 `TOKENS` | `ctx.theme.overrideTokens(PLUGIN_ID, tokens)`，ui-layout 把值作为 inline style 写到 `<body>` | 客户端 HMR，约 1s |
-| 样式层（可关） | `lib/client.js` 的 `CSS_LAYER` | 注入 `<style data-plugin="dsh-leafy-skin">` | 客户端 HMR，约 1s；开关 `ENABLE_CSS_LAYER` |
+| token 层 | `lib/client.js` 的 `TOKENS` | `ctx.theme.overrideTokens(PLUGIN_ID, tokens)`，ui-layout 写进 `<body>` 的 inline style | 客户端 HMR，约 1s |
+| 样式层（可关） | `lib/client.js` 的 `CSS_LAYER` | 注入 `<style data-plugin="dsh-leafy-skin">` | 同上；开关 `ENABLE_CSS_LAYER` |
 | Host 首帧 | `lib/index.js` | `webserver/index-inject` 追加引导 CSS（画布底色 / `--dsh-boot-bg`） | **Host 不热重载，必须重启 DSH** |
 
-## 硬约束（改之前先看，违反会被自检拦下或被 DSH 升级打脸）
+## 硬约束（违反会被自检拦下或被 DSH 升级打脸）
 
-1. **token 值必须是 `{ light, dark }` 成对字符串**，裸字符串会被 `overrideTokens` 直接抛错，
-   深/浅色其中一档也会不可读。
-2. **样式层不许出现类选择器**（哈希类名如 `.BynINW_frame` 升级即失效），只用元素与官方公开钩子。
-   已确认可用的稳定钩子（都来自官方 JSX 里刻意加的 `data-*` 或 role）：
+1. **token 值必须是 `{ light, dark }` 成对字符串**：裸字符串会被 `overrideTokens` 直接抛错，
+   深/浅色缺一档也不可读。
+2. **样式层不许出现类选择器**（`.BynINW_frame` 这类哈希类名升级即失效）。可用钩子只有元素、
+   `::selection`、`prefers-reduced-motion`，以及官方 JSX 里刻意加的稳定钩子：
    `[data-composer-card]`（输入卡片）、`[data-composer-input]`（Lexical 编辑区）、
    `[data-input-scroll]`、`[data-composer-placeholder]`、`[data-menu-material]`（菜单/浮层）、
-   `[data-menu-backing]`、`[role=...]`、`::selection`、`prefers-reduced-motion`。
-   反例：`.RlGAzG_card`、`.BynINW_frame` 这类哈希类名一律不许出现。
-3. **样式层一律套 `:where()` 归零特异性**：组件自己写的 `transition`/`animation` 必须永远优先，
-   我们只补"组件没写"的空白。不加 `!important`。
-4. **语义色不动**：错误红、警告黄、成功绿保持官方值。全绿会丢掉状态可读性。
-5. **可比对比度底线**：正文/次要/三级文字与语法高亮颜色 ≥ 4.5:1（AA）；caption 与代码注释是
-   刻意的弱化档，改动时必须在注释里说明"刻意"。
-6. **不动 `~/.dsh` 下的官方文件**，只改本仓库；不要为了"更好看"去 patch 官方包。
-7. **保持零构建**：不引入依赖、构建步骤或外置资源。样式内联成字符串是刻意的选择
-   （官方 ui-theme 也这么干）；外置 `.css` 需要打包/取资源，违反此约束。
-
-## 必跑的验证
-
-```powershell
-node tools/check-palette.mjs
-```
-
-会校验：token 形状、20 组文字/底色对比度、18 组语法高亮对比度，以及样式层的三条约束
-（括号配平、无 `!important`、无类选择器）。**改完必跑**，别靠肉眼。
-
-## 手感/动效的踩坑记录（别再走一遍）
-
-- 缓动**不要用 `cubic-bezier(.2,0,0,1)`**：起步速度为零，短时长下观感是"先不动再猛走"，
-  实测被评价为"生硬"。过渡类用 easeOutQuad `cubic-bezier(.25,.46,.45,.94)`、时长 ~200ms。
-- **半透明玻璃表面绝不要用透明度淡入**：菜单底色是 `.material` 子层上的
-  `--dsw-menu-surface-fill`（浅色仅 58% 不透明）+ `backdrop-filter`，淡入的中间帧是
-  "模糊按全强度算、却按半透明合成"，肉眼能看到"先透一层糊、再变实"。
-  入场只动 `translate`/`scale`（且用独立属性，别用 `transform` 简写），opacity 保持 1。
-- **官方动效变量别乱改**（`--ds-ease-in-out`、`--ds-transition-duration*`）：它们是给侧栏收放
-  这类尺寸动画用的，改快会让侧栏开合发顿。过渡手感归样式层管，两者职责分开。
-- 兜底范围要够大：DSH 里大量可点区域是 `div`（列表行、卡片、菜单项），只兜表单控件不够，
-  所以用 `:where(*)` 的零特异性全局兜底。
-- 菜单定位走 inline `top/left`（`.portal`），不用 transform —— 这是"可以安全动
-  translate/scale"的前提，改前先复核。
-- **输入框不是 `<textarea>`**：composer 是 Lexical 的 `contenteditable`（`[data-composer-input]`、
-  `role="textbox"`、`aria-multiline`），拿到卡片的是 `[data-composer-card]`。所有输入框相关的
-  玩法都从这两个属性入手（`caret-color` 对 contenteditable 同样有效）。
-- **别给 `[data-composer-card]` 加 translate/transform/scale**：卡片里可能挂 `position: fixed`
-  的浮层（提示条、下拉），一旦它有 transform，这些浮层会改用卡片当参照系、坐标整块飞掉。
-  "抬升感"一律用阴影表达（现有做法：`::after` 上叠一圈柔光 + 一小片彩色下阴影）。
-  同理，任何"想动 transform"的容器，先确认里面没有 fixed 浮层。
+   `[data-menu-backing]`、`[role=...]`。
+3. **样式层一律套 `:where()` 归零特异性**，不加 `!important`：组件自己写的
+   `transition`/`animation` 永远优先，我们只补它没写的空白。
+4. **语义色不动**：错误红、警告黄、成功绿保持官方值，全绿会丢掉状态可读性。
+5. **对比度底线 ≥ 4.5:1（AA）**：正文 / 次要 / 三级文字与语法高亮；caption 与代码注释是刻意的
+   弱化档，改动时必须在注释里写明"刻意"。
+6. **不动 `~/.dsh` 下的官方文件**，也不为"更好看"去 patch 官方包。
+7. **保持零构建**：不加依赖、构建步骤或外置资源。样式内联成字符串是刻意的（官方 ui-theme 也这么干），
+   外置 `.css` 需要打包/取资源，违反此约束。
 
 ## 命令
 
 ```powershell
-# 自检
+# 必跑的自检（改完就跑，别靠肉眼）：token 形状、20 组文字/底色 + 18 组语法高亮对比度、
+# 样式层三条约束（括号配平 / 无 !important / 无类选择器）
 node tools/check-palette.mjs
 
 # 安装到 desktop profile（写入 dependencies 与 dsh.profile.bundles）
 & "$env:LOCALAPPDATA\Programs\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd" `
   plugin --profile desktop add C:\Users\badai\projects2\dsh-leafy-skin
-
-# 停用（任选其一，都需重启）
-#   1) 注释掉 cordis.patch.yml 的 insert 行
-#   2) 从 ~/.dsh/profiles/desktop/package.json 的 dsh.profile.bundles 删掉 dsh-leafy-skin
-#   3) dsh plugin --profile desktop remove dsh-leafy-skin
 ```
+
+停用见 README 的卸载章节（注释 `cordis.patch.yml` 的 `insert` 行 / 从 profile 的
+`dsh.profile.bundles` 删掉 / `dsh plugin --profile <profile> remove`），三条都需重启。
+
+## 踩坑记录（别再走一遍）
+
+- **缓动别用 `cubic-bezier(.2,0,0,1)`**：起步速度为零，短时长下观感是"先不动再猛走"，实测被
+  评价为"生硬"。过渡类统一 easeOutQuad `cubic-bezier(.25,.46,.45,.94)` + 约 200ms。
+- **半透明玻璃表面绝不用透明度淡入**：菜单底色是 `.material` 子层上的 `--dsw-menu-surface-fill`
+  （浅色仅 58% 不透明）+ `backdrop-filter`，淡入的中间帧是"模糊按全强度算、却按半透明合成"，
+  肉眼能看到"先透一层糊、再变实"。入场只动 `translate`/`scale`（用独立属性，别用 `transform`
+  简写），opacity 保持 1。
+- **官方动效变量别乱改**（`--ds-ease-in-out`、`--ds-transition-duration*`）：它们是给侧栏收放这类
+  尺寸动画用的，改快会让侧栏开合发顿。过渡手感归样式层管，两者职责分开。
+- **兜底范围要够大**：DSH 里大量可点区域是 `div`（列表行、卡片、菜单项），只兜表单控件不够，
+  所以用 `:where(*)` 的零特异性全局兜底。
+- **菜单定位走 inline `top/left`（`.portal`），不用 transform**——这是"可以安全动 translate/scale"
+  的前提，改前先复核。
+- **输入框不是 `<textarea>`**：composer 是 Lexical 的 `contenteditable`（`[data-composer-input]`、
+  `role="textbox"`、`aria-multiline`），拿到卡片的是 `[data-composer-card]`。所有输入框相关的玩法
+  都从这两个属性入手（`caret-color` 对 contenteditable 同样有效）。
+- **别给 `[data-composer-card]` 加 translate/transform/scale**：卡片里可能挂 `position: fixed` 的
+  浮层（提示条、下拉），卡片一旦有 transform，这些浮层会改用卡片当参照系、坐标整块飞掉。"抬升感"
+  一律用阴影表达（现状：`::after` 上叠一圈柔光 + 一小片彩色下阴影）。同理，任何"想动 transform"
+  的容器，先确认里面没有 fixed 浮层。
 
 ## 提交约定
 
 - 一个阶段一个 commit（3A/3B/3C/3D 各一个），消息用中文，写清"改了什么 + 为什么"。
-- **返工结论写进本文件的「踩坑记录」，不要堆到 README**：这个仓库的价值有一半在
-  "为什么这么改"，只留代码会把踩过的坑重新踩一遍；而 README 要保持简洁（见下）。
-- **文档**：`README.md` 是英文版、`README.zh.md` 是中文版，两者结构必须一致，改一个要同步
-  另一个；README 只放"是什么 / 怎么装 / 怎么改 / 限制 / 参与 / 许可"，实现细节与踩坑记录
-  留在本文件。许可证是 MIT（`LICENSE`，版权归 badai147）。
-- 换行一律 LF，由 `.gitattributes` 钉住。
-- 不接受 PR；issue 欢迎（README 的参与章节已写明，别把它改成"欢迎 PR"）。
+- **返工结论写进本文件的「踩坑记录」，不要堆到 README**：本仓库一半的价值在"为什么这么改"，
+  README 要保持简洁。
+- **文档**：`README.md` 英文、`README.zh.md` 中文，两者结构必须一致，改一个同步另一个；只放
+  "是什么 / 怎么装 / 怎么改 / 限制 / 参与 / 许可"。许可证 MIT（`LICENSE`，版权归 badai147）。
+  变更记录写进 `CHANGELOG.md`。
+- 换行一律 LF，由 `.gitattributes` 钉住。不接受 PR，issue 欢迎（别把 README 改成"欢迎 PR"）。
 
 ## 已知边界（改不到，别浪费时间）
 
