@@ -70,10 +70,7 @@ See [CHANGELOG.md](CHANGELOG.md)
 
 ## Contributing
 
-Issues are welcome: bug reports, colour suggestions, screenshots of anything that looks off.
-
-**Pull requests are not accepted** — this is a personal skin, and reviewing patches would cost more
-than it returns. Please open an issue instead.
+Questions and suggestions are welcome as issues. Pull requests are not accepted.
 
 ## License
 
