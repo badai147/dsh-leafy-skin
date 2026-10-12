@@ -7,6 +7,13 @@ light emerald and a dark mint variant.
 
 **English** | [中文](README.zh.md)
 
+## Compatibility
+
+| Plugin version | DSH version |
+| --- | --- |
+| v0.1.1 | dsh-v0.2.0-rc.2 |
+| v0.1.0 | dsh-v0.2.0-rc.2 |
+
 ## Screenshot
 
 ![Screenshot](show.png)
