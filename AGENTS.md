@@ -98,7 +98,7 @@ node tools/check-palette.mjs
   README 要保持简洁。
 - **文档**：`README.md` 英文、`README.zh.md` 中文，两者结构必须一致，改一个同步另一个；只放
   "是什么 / 怎么装 / 怎么改 / 限制 / 参与 / 许可"。许可证 MIT（`LICENSE`，版权归 badai147）。
-  变更记录写进 `CHANGELOG.md`。
+  变更记录写进 `CHANGELOG.md`（英文）/ `CHANGELOG.zh.md`（中文），同样两份同步。
 - 换行一律 LF，由 `.gitattributes` 钉住。不接受 PR，issue 欢迎（别把 README 改成"欢迎 PR"）。
 
 ## 发布

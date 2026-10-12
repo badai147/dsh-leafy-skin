@@ -1,62 +1,86 @@
-# 更新日志
+# Changelog
 
-本文件记录 dsh-leafy-skin 所有值得注意的变更，格式参考
-[Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循
-[语义化版本](https://semver.org/lang/zh-CN/)。
+All notable changes to dsh-leafy-skin are documented here. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
+[Semantic Versioning](https://semver.org/).
 
-## [未发布]
+## [0.1.1] - 2026-10-12
 
-### 新增
+### Added
 
-- **锚定弹窗入场**——会话 / 回合统计与"上下文占用"面板点开是一帧蹦出来的（官方这套 `role=dialog`
-  面板零动画）。现在从触发器方向上浮 4px + 缩放 .985→1（160ms）；面板是半透明玻璃面，全程
-  opacity 保持 1，不出现"先透一层糊、再变实"。
-- **会话切换内容入场**——切换会话时消息区淡入 + 上浮 4px（200ms easeOutQuint）。靠
-  `[data-phase]` / `[data-content-phase]` 的 `settling→active` 迁移与视图区卸载重挂自然重放，
-  零 JS。
-- **侧栏收放曲线**——官方 `grid-template-columns .3s cubic-bezier(.4,0,.2,1)`（起步速度为零）
-  换成 `.36s cubic-bezier(.22,1,.36,1)`（easeOutQuint，起步即全速、落地绵长）。只在动画期间
-  （`[data-animating]`）改写官方读取的变量取值，tooltip、模态、主按钮等不受影响。
+- **Anchored popovers** — the session / turn stats and the context-usage panel used to appear in a
+  single frame (these official `role=dialog` panels have no animation at all). They now float up
+  4px from their trigger and scale from .985 to 1 over 160ms. The panel is a translucent glass
+  surface, so opacity stays at 1 throughout — no "blurry first, then solid".
+- **Session-switch content entrance** — switching sessions fades the message area in and lifts it
+  4px (200ms easeOutQuint). It replays naturally through the `settling→active` migration of
+  `[data-phase]` / `[data-content-phase]` and through the view area unmounting and remounting,
+  with zero JS.
+- **Sidebar collapse easing** — the official `grid-template-columns .3s cubic-bezier(.4,0,.2,1)`
+  (which starts at zero velocity) becomes `.36s cubic-bezier(.22,1,.36,1)` (easeOutQuint: full
+  speed out of the gate, long soft landing). The override only rewrites the variables while the
+  animation runs (`[data-animating]`), so tooltips, modals and primary buttons are unaffected.
+- **Sidebar panel tab strip** — dockkit's tabs only style the selected and hover states, and the
+  selected background (`--dsw-alias-markdown-tag`, officially neutral-bluish-75/850) sits almost
+  on top of the sidebar fill, so a strip of tabs read as two lines of grey text. That token —
+  consumed by nothing but dockkit's selected tab across the whole bundle — now sits clearly apart
+  from the sidebar fill (light `#C9DEC7` / dark `#2C3B2C`, still ≥ 8:1 against `label-primary`),
+  backed by three properties the official CSS never sets: a hairline under the tab strip, a resting
+  tint and 500 weight for tabs, and an emerald inset ring on the selected one. The hooks are
+  `[data-dockkit-strip]` / `[data-dockkit-tab]` / `aria-selected`: zero specificity, and none of
+  them contesting an official declaration.
 
-### 文档
+### Documentation
 
-- `AGENTS.md` 踩坑记录补三条：官方锚定弹窗零动画、官方动效变量只在动画期覆盖、会话切换的
-  重放机制与已知缺口。
+- `AGENTS.md` pitfalls gain three entries: official anchored popovers have no animation, official
+  motion variables are overridden only while animating, and how session-switch entrances replay
+  (plus the known gap).
 
 ## [0.1.0] - 2026-10-11
 
-首个可用版本。皮肤 = token 层（112 个 `--dsw-*` 覆盖，浅色翡翠 / 深色薄荷）
-+ 可关的样式层 + Host 首帧引导 CSS。
+First usable release. The skin is a token layer (112 `--dsw-*` overrides, light emerald / dark
+mint) plus a switchable style layer plus host-injected first-frame boot CSS.
 
-### 新增
+### Added
 
-- **调色板（3A 色彩分层）**——雾绿画布 / 抬升面板 / 深一档侧栏三档拉开层次；强调色族从官方
-  deepseek 蓝换成浅色翡翠、深色薄荷，链接、主按钮、气泡、状态点与引导页渐变一并跟着变绿。
-- **空间与质感（3B）**——圆角从官方 4/8/12/16/20/28 收到 6/8/10/14/18/18；阴影换成绿墨弥散
-  （`#122C1A` / `#040A05`）并加大扩散、降低单层不透明度；四档描边压到浅色 4–14% / 深色 5–16%。
-- **排版与细节（3C）**——字体栈加入 Inter / Noto Sans SC，代码字体把 Cascadia Code 提到
-  Consolas 之前；代码块底色、滚动条几何（5px → 8px，2px 透明边做视觉内缩）、hover 强度调优；
-  语法高亮从冷色换成与绿底和谐的暖绿系。
-- **样式层（3D，`ENABLE_CSS_LAYER` 可关）**——文本选中高亮（官方全包只有 PDF 文本层与 xterm
-  定义过 `::selection`）、`:where(*)` 零特异性过渡兜底、菜单/浮层入场动效、输入框聚焦反馈
-  （强调色光标 + `::after` 柔光环，抬升感用阴影表达），并在 `prefers-reduced-motion` 下关掉兜底动效。
-- **Host 首帧**——`webserver/index-inject` 追加引导 CSS，覆盖浅色 / 深色 / 跟随系统六种组合，
-  第一帧就是叶绿，不再是官方写死的 `#fff` / `#151517`。
-- **开发工具**——`tools/check-palette.mjs`：校验 token 形状、20 组文字/底色与 18 组语法高亮对比度，
-  以及样式层三条约束（括号配平 / 无 `!important` / 无类选择器）。
+- **Palette (3A colour layering)** — a mist-green canvas, raised panels and a deeper sidebar pull
+  three levels apart; the accent family moves from the official deepseek blue to emerald in light
+  mode and mint in dark, and links, primary buttons, bubbles, state dots and onboarding gradients
+  all turn green with it.
+- **Space and texture (3B)** — radii tighten from the official 4/8/12/16/20/28 to 6/8/10/14/18/18;
+  shadows become green-ink diffuse (`#122C1A` / `#040A05`) with a wider spread and lower per-layer
+  opacity; the four hairline steps drop to 4–14% in light and 5–16% in dark.
+- **Typography and details (3C)** — Inter / Noto Sans SC join the font stack and Cascadia Code
+  moves ahead of Consolas in the code stack; code block fills, scrollbar geometry (5px → 8px with
+  a 2px transparent edge for a visual inset) and hover strength are tuned; syntax highlighting
+  moves from cold colours to a warm green family that sits well on a green ground.
+- **Style layer (3D, switchable via `ENABLE_CSS_LAYER`)** — text selection highlighting (the
+  official bundle only defines `::selection` for the PDF text layer and xterm), a zero-specificity
+  `:where(*)` transition fallback, menu / popover entrance motion, composer focus feedback (accent
+  caret plus an `::after` soft ring, with elevation expressed as shadow), and all fallback motion
+  disabled under `prefers-reduced-motion`.
+- **Host first frame** — `webserver/index-inject` appends boot CSS covering all six light / dark /
+  follow-system combinations, so the first frame is already leafy instead of the official
+  hard-coded `#fff` / `#151517`.
+- **Tooling** — `tools/check-palette.mjs` validates token shape, 20 text/background and 18 syntax
+  contrast pairs, and the style layer's three constraints (balanced brackets / no `!important` /
+  no class selectors).
 
-### 修复
+### Fixed
 
-- 过渡手感：弃用 `cubic-bezier(.2,0,0,1)`（起步速度为零，观感"先不动再猛走"），统一 easeOutQuad
-  `cubic-bezier(.25,.46,.45,.94)` + 约 200ms；回退被误改的官方动效变量（`--ds-ease-in-out`、
-  `--ds-transition-duration*` 是侧栏收放这类尺寸动画专用的）；兜底范围从"点名表单控件"扩大为
-  `:where(*)` 全局兜底。
-- 菜单入场改为纯 `translate`/`scale`，去掉透明度淡入：半透明玻璃表面按透明度淡入会看到
-  "先透一层糊、再变实"。
-- 输入框聚焦光环调轻（3px / 16% → 2px / 12%，下阴影同步收）。
+- Transition feel: dropped `cubic-bezier(.2,0,0,1)` (zero starting velocity, perceived as "nothing,
+  then a jerk") in favour of easeOutQuad `cubic-bezier(.25,.46,.45,.94)` at around 200ms; reverted
+  the mistakenly overridden official motion variables (`--ds-ease-in-out` and
+  `--ds-transition-duration*` exist for size animations such as the sidebar collapse); widened the
+  fallback from named form controls to a global `:where(*)` fallback.
+- Menu entrance now uses pure `translate`/`scale` instead of an opacity fade: a translucent glass
+  surface fading by opacity shows "blurry through a half-transparent composite, then solid".
+- Composer focus ring lightened (3px / 16% → 2px / 12%, lower shadow tightened to match).
 
-### 文档
+### Documentation
 
-- `README.md` / `README.zh.md` 拆成英文、中文两版，补 MIT `LICENSE`（版权归 badai147）。
-- 换行统一 LF（`.gitattributes`），新增 `AGENTS.md` 记录仓库须知与踩坑记录。
-- 新增本文件。
+- `README.md` / `README.zh.md` split into English and Chinese versions, MIT `LICENSE` added
+  (copyright badai147).
+- Line endings unified to LF (`.gitattributes`), and a new `AGENTS.md` records repository notes
+  and pitfalls.
+- This file added.

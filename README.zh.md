@@ -57,7 +57,7 @@ dsh plugin --profile web add dsh-leafy-skin
 
 ## 更新日志
 
-见 [CHANGELOG.md](CHANGELOG.md)
+见 [CHANGELOG.zh.md](CHANGELOG.zh.md)
 
 ## 贡献
 
