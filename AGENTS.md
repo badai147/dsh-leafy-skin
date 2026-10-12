@@ -81,6 +81,15 @@ node tools/check-palette.mjs
   变更记录写进 `CHANGELOG.md`。
 - 换行一律 LF，由 `.gitattributes` 钉住。不接受 PR，issue 欢迎（别把 README 改成"欢迎 PR"）。
 
+## 发布
+
+打 tag 即发布：`git tag v0.1.0 && git push origin v0.1.0`。GitHub Actions
+（`.github/workflows/publish.yml`）在 ubuntu + node 22 上跑 `npm publish`，仓库需配 `NPM_TOKEN`
+secret（npm Automation token）。零依赖所以不装依赖、不跑构建。
+
+**tag 的版本号必须等于 `package.json` 的 `version`**，否则 workflow 在 publish 前就失败。发新版
+流程：改 `version` → 补 `CHANGELOG.md` → 提交并推到 master → 打 `v<version>` tag 推送。
+
 ## 已知边界（改不到，别浪费时间）
 
 - Windows 原生标题栏 overlay 颜色由桌面 shell 写死（`lib/main.js` 的 `chromeFallbackFill()`）；

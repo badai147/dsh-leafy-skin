@@ -1,0 +1,41 @@
+# 打 tag 即发布到 npm：推送 v* tag（或手动 workflow_dispatch）触发。
+# 前置：仓库 Settings → Secrets and variables → Actions 里配好 NPM_TOKEN（npm Automation token）。
+# 版本一致性：tag 的版本号必须等于 package.json 的 version，否则 publish 前直接失败。
+name: Publish to npm
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      # tag 推送时校验 v<version> 与 package.json 一致；手动触发不校验（可用来重发已存在的 tag）。
+      - name: Check tag matches package.json version
+        if: github.ref_type == 'tag'
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version="$(node -p 'require("./package.json").version')"
+          if [ "$tag" != "$version" ]; then
+            echo "tag v$tag 与 package.json 的 $version 不一致" >&2
+            exit 1
+          fi
+          echo "版本一致：v$version"
+
+      # 零依赖、零构建：不需要 install，直接发布（files 只含 lib 与 cordis.patch.yml）。
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

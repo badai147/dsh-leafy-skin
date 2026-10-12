@@ -13,6 +13,11 @@
     "skin",
     "green"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/badai147/dsh-leafy-skin.git"
+  },
+  "homepage": "https://github.com/badai147/dsh-leafy-skin#readme",
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
