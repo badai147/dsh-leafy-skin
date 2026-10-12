@@ -24,7 +24,8 @@ DSH Web GUI 的**护眼绿叶皮肤插件**：在**当前主题之上**叠一层
    `::selection`、`prefers-reduced-motion`，以及官方 JSX 里刻意加的稳定钩子：
    `[data-composer-card]`（输入卡片）、`[data-composer-input]`（Lexical 编辑区）、
    `[data-input-scroll]`、`[data-composer-placeholder]`、`[data-menu-material]`（菜单/浮层）、
-   `[data-menu-backing]`、`[role=...]`。
+   `[data-menu-backing]`、`[role=...]`，以及 dockkit 面板 tab 条的 `[data-dockkit-strip]` /
+   `[data-dockkit-tab]`（常配合 `aria-selected`）。
 3. **样式层一律套 `:where()` 归零特异性**，不加 `!important`：组件自己写的
    `transition`/`animation` 永远优先，我们只补它没写的空白。唯一例外是侧栏收放那两个
    `--ds-*` 变量的覆盖——它不是抢属性，而是在动画期间改写官方规则读取的变量取值，
