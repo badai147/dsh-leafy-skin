@@ -4,6 +4,17 @@ All notable changes to dsh-leafy-skin are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.2] - 2026-10-17
+
+### Added
+
+- **Plugin icon** — `icon.svg`, a white leaf on the leafy gradient, replaces the default DSH plugin
+  artwork on the Plugins page; declared through `package.json`'s `icon` field and shipped in the
+  npm package.
+- **Localized description** — `locale/en.json` / `locale/zh.json` give the plugin card a description
+  that follows the UI language, instead of the single-language `package.json` description.
+- **README badge** — both READMEs now end with the "powered by dsh" badge.
+
 ## [0.1.1] - 2026-10-12
 
 ### Added

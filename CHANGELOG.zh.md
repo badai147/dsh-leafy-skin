@@ -4,6 +4,16 @@
 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循
 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.1.2] - 2026-10-17
+
+### 新增
+
+- **插件图标**——新增 `icon.svg`（叶绿渐变底 + 白色叶片），替换插件页上的默认 DSH 图标；
+  通过 `package.json` 的 `icon` 字段声明，并随 npm 包发布。
+- **描述本地化**——`locale/en.json` / `locale/zh.json` 让插件卡片的描述跟随界面语言切换，
+  不再只有 `package.json` 里的单一语言描述。
+- **README 徽章**——中英文 README 结尾都加上 "powered by dsh" 徽章。
+
 ## [0.1.1] - 2026-10-12
 
 ### 新增
