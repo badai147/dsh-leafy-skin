@@ -90,6 +90,11 @@ node tools/check-palette.mjs
   浮层（提示条、下拉），卡片一旦有 transform，这些浮层会改用卡片当参照系、坐标整块飞掉。"抬升感"
   一律用阴影表达（现状：`::after` 上叠一圈柔光 + 一小片彩色下阴影）。同理，任何"想动 transform"
   的容器，先确认里面没有 fixed 浮层。
+- **插件列表的图标和描述来自包清单，不是客户端代码**：DSH 在 Host 侧读 `package.json` 的
+  `icon`（相对路径、≤256 KiB、SVG/PNG/JPEG/WebP）和 `<包>/locale/en.json` 加同目录其它语言
+  文件（`{ meta: { title, description } }`）。locale 文件必须从 `exports` 导出
+  （`./locale/*.json`），否则读取会失败；还得写进 `files`，否则 npm 包里没有。标题缺省回退包名，
+  描述回退 `package.json` 的 `description`。改图标/文案只需动清单与 locale，别去客户端注入。
 
 ## 提交约定
 

@@ -1,7 +1,7 @@
 {
   "name": "dsh-leafy-skin",
   "version": "0.1.1",
-  "description": "Leafy — 护眼绿色皮肤：把 DSH Web GUI 的 --dsw-* 调色板叠成叶绿系（浅色 + 深色）。",
+  "description": "Leafy — an eye-friendly green skin that folds the DSH Web GUI's --dsw-* palette into leafy greens (light + dark).",
   "type": "module",
   "main": "lib/index.js",
   "license": "MIT",
@@ -36,11 +36,13 @@
     },
     "./client": "./lib/client.js",
     "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
     "./package.json": "./package.json"
   },
   "files": [
     "lib",
     "cordis.patch.yml",
-    "icon.svg"
+    "icon.svg",
+    "locale/*.json"
   ]
 }
