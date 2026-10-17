@@ -1,0 +1,11 @@
+<svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="5" y="5" width="26" height="26" rx="8" fill="url(#leafy-tile)"/>
+  <path d="M26.7 9.6c.6 8.3-4.2 14.7-11 14.7-3.3 0-5.6-2.1-5.6-5 0-5.6 6.6-9.5 16.6-9.7Z" fill="#F5FCF7"/>
+  <path d="M10.4 27.2c2.4-5.4 5.9-9.4 10.6-12.1" stroke="#1A774F" stroke-width="1.6" stroke-linecap="round"/>
+  <defs>
+    <linearGradient id="leafy-tile" x1="18" y1="5" x2="18" y2="31" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5FC492"/>
+      <stop offset="1" stop-color="#14724E"/>
+    </linearGradient>
+  </defs>
+</svg>
