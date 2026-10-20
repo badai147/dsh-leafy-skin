@@ -89,6 +89,64 @@ for (const pair of [['README.md', 'README.zh.md'], ['CHANGELOG.md', 'CHANGELOG.z
   else fail(`${pair[0]} / ${pair[1]} 标题层级`, `${a} vs ${b}`)
 }
 
+// ── 7. 两份 CHANGELOG：版本与各节条目数一致，且每条只有一句话 ────────────────
+// 这个仓库的变更记录是"一条一句话、不写小标题、不写数值与论证"，中英必须一条对
+// 一条。规则靠人守不住（改英文忘了改中文），所以机械校验。
+function parseChangelog(text) {
+  const versions = []
+  let current = null
+  let section = null
+  for (const line of text.split('\n')) {
+    const version = /^## \[([^\]]+)\]/.exec(line)
+    if (version) {
+      current = { version: version[1], sections: [] }
+      versions.push(current)
+      section = null
+      continue
+    }
+    const heading = /^### (.+?)\s*$/.exec(line)
+    if (heading && current) {
+      section = { title: heading[1], bullets: [] }
+      current.sections.push(section)
+      continue
+    }
+    if (section && line.startsWith('- ')) section.bullets.push(line.slice(2))
+  }
+  return versions
+}
+
+const zhVersions = parseChangelog(await read('CHANGELOG.zh.md'))
+const enVersions = parseChangelog(await read('CHANGELOG.md'))
+const sameShape =
+  zhVersions.length === enVersions.length &&
+  zhVersions.every((zh, index) => {
+    const en = enVersions[index]
+    return (
+      zh.version === en.version &&
+      zh.sections.length === en.sections.length &&
+      zh.sections.every((section, position) => section.bullets.length === en.sections[position].bullets.length)
+    )
+  })
+if (sameShape) ok('两份 CHANGELOG 的版本与各节条目数一致')
+else fail('两份 CHANGELOG 的版本与各节条目数一致', '按版本逐节对照')
+
+const stripCode = (text) => text.replace(/`[^`]*`/g, '')
+const notOneSentence = []
+for (const bullet of zhVersions.flatMap((v) => v.sections.flatMap((s) => s.bullets))) {
+  const text = stripCode(bullet).trim()
+  if (!text.endsWith('。') || text.slice(0, -1).includes('。')) notOneSentence.push(`中文：${bullet.slice(0, 36)}…`)
+}
+for (const bullet of enVersions.flatMap((v) => v.sections.flatMap((s) => s.bullets))) {
+  const text = stripCode(bullet).trim()
+  if (!text.endsWith('.') || /\.\s/.test(text.slice(0, -1))) notOneSentence.push(`English: ${bullet.slice(0, 44)}…`)
+}
+if (notOneSentence.length === 0) {
+  ok('CHANGELOG 每条一句话')
+} else {
+  fail('CHANGELOG 每条一句话', `${notOneSentence.length} 条不合规`)
+  for (const line of notOneSentence.slice(0, 5)) console.log(`        ${line}`)
+}
+
 if (problems.length > 0) {
   console.error(`\n${problems.length} 项清单问题。`)
   process.exit(1)
