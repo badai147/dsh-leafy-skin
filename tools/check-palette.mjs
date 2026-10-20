@@ -2,54 +2,20 @@
 //
 //   node tools/check-palette.mjs
 //
-// 做两件事：
+// 做四件事：
 //   1) 形状校验：lib/client.js 里的 TOKENS 必须是「token -> { light, dark } 字符串对」，
 //      裸字符串会被 DSH 的 overrideTokens 直接抛错（并导致深/浅色其中一档不可读）。
-//   2) 对比度复核：按 WCAG 2.1 相对亮度算关键「文字 / 底色」组合，
-//      低于 4.5:1 会点出来（说明文字 caption 属于刻意弱化，单独标注）。
+//   2) 首帧一致：Host 侧 lib/index.js 的引导色必须等于 token 层的画布色，否则页面
+//      第一帧会比皮肤挂载后偏一档，肉眼能看到跳变。
+//   3) 对比度复核：按 WCAG 2.1 相对亮度算关键「文字 / 底色」组合——包括把半透明
+//      玻璃面先合成到底色上的组合，以及焦点环这类非文字元素（AA 门槛 3:1）。
+//   4) 样式层三条约束：括号配平 / 无 !important / 无类选择器。
 import { readFile } from 'node:fs/promises'
-import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
+import { join } from 'node:path'
+import { ROOT, readClientSource, readTokens, extractCssLayer, contrast, composite } from './palette.mjs'
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const CLIENT = join(ROOT, 'lib', 'client.js')
-
-/** 从 client bundle 里取出 TOKENS 对象字面量（纯数据，无函数调用）。 */
-function extractTokens(source) {
-  const start = source.indexOf('const TOKENS = {')
-  if (start === -1) throw new Error('lib/client.js 里找不到 `const TOKENS = {`')
-  const open = source.indexOf('{', start)
-  let depth = 0
-  for (let i = open; i < source.length; i++) {
-    if (source[i] === '{') depth++
-    else if (source[i] === '}') {
-      depth--
-      if (depth === 0) return new Function(`return (${source.slice(open, i + 1)})`)()
-    }
-  }
-  throw new Error('TOKENS 字面量没有闭合')
-}
-
-/** 单色 hex -> 相对亮度。非 hex（color-mix / gradient / alpha 简写）返回 null。 */
-function luminance(value) {
-  const hex = /^#([0-9a-f]{6})$/i.exec(String(value).trim())
-  if (!hex) return null
-  const channels = [0, 2, 4]
-    .map((i) => parseInt(hex[1].slice(i, i + 2), 16) / 255)
-    .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
-  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
-}
-
-/** 两色对比度；任一不可解析时返回 null。 */
-function contrast(fg, bg) {
-  const [a, b] = [luminance(fg), luminance(bg)]
-  if (a === null || b === null) return null
-  const [hi, lo] = a > b ? [a, b] : [b, a]
-  return (hi + 0.05) / (lo + 0.05)
-}
-
-const source = await readFile(CLIENT, 'utf8')
-const tokens = extractTokens(source)
+const source = await readClientSource()
+const tokens = readTokens(source)
 
 // ── 1. 形状校验 ────────────────────────────────────────────────────────────────
 const problems = []
@@ -66,6 +32,25 @@ if (problems.length > 0) {
 }
 console.log('形状校验：通过（全部为 { light, dark } 字符串对）')
 
+// ── 1b. 首帧一致 ──────────────────────────────────────────────────────────────
+// Host 的引导 CSS 先于客户端脚本生效；它写死两个画布色。这两处和 token 层没有
+// 共享模块可用（客户端是手写模块工厂，不能 import），只能靠这里机械钉住。
+const indexSource = await readFile(join(ROOT, 'lib', 'index.js'), 'utf8')
+const bootLight = /const LIGHT_BG = '([^']+)'/.exec(indexSource)?.[1]
+const bootDark = /const DARK_BG = '([^']+)'/.exec(indexSource)?.[1]
+const canvas = tokens['--dsw-alias-bg-base']
+const bootChecks = [
+  ['浅色首帧 == --dsw-alias-bg-base.light', bootLight, canvas?.light],
+  ['深色首帧 == --dsw-alias-bg-base.dark', bootDark, canvas?.dark],
+]
+let failures = 0
+console.log('\n首帧一致（lib/index.js 的引导色 vs token 层画布色）：')
+for (const [label, boot, token] of bootChecks) {
+  const same = typeof boot === 'string' && boot.toLowerCase() === String(token).toLowerCase()
+  console.log(`  ${same ? 'OK  ' : 'FAIL'}  ${label}（引导 ${boot ?? '缺失'} / token ${token ?? '缺失'}）`)
+  if (!same) failures++
+}
+
 // ── 2. 关键组合对比度 ─────────────────────────────────────────────────────────
 /**
  * 「别名由色阶派生」的几个入口——官方 design-platform.css 里同一别名在浅/深色下
@@ -79,6 +64,10 @@ const DERIVED = {
   '--dsw-alias-label-primary-foreground': {
     light: '--dsw-static-neutral-bluish-00',
     dark: '--dsw-static-neutral-bluish-1000',
+  },
+  '--dsw-alias-state-business-primary': {
+    light: '--dsw-static-deepseek-500',
+    dark: '--dsw-static-deepseek-400',
   },
 }
 
@@ -114,7 +103,7 @@ const PAIRS = [
   ['深色 按钮字 / 主按钮', '--dsw-static-neutral-bluish-1000', '--dsw-alias-brand-primary', 'text'],
 ]
 
-let failures = 0
+let pass = 0
 console.log('\n对比度（AA 正文门槛 4.5:1）：')
 for (const [label, fgName, bgName, kind] of PAIRS) {
   const mode = label.startsWith('深色') ? 'dark' : 'light'
@@ -128,11 +117,65 @@ for (const [label, fgName, bgName, kind] of PAIRS) {
   const text = ratio.toFixed(2).padStart(6)
   if (ratio >= 4.5) {
     console.log(`${text}  OK      ${label}`)
+    pass++
   } else if (kind === 'caption') {
     console.log(`${text}  弱化    ${label}（caption 刻意低对比，官方原值同档）`)
   } else {
     console.log(`${text}  FAIL    ${label}`)
     failures++
+  }
+}
+
+// ── 2b. 玻璃面：先合成再算 ────────────────────────────────────────────────────
+// 菜单/锚定弹窗是「半透明的 --dsw-menu-surface-fill + backdrop-filter」。只看 token
+// 原值会高估对比度，必须先把它按 alpha 合成到画布上再算文字。
+console.log('\n玻璃面合成后的对比度（菜单 58% / 50% 不透明）：')
+for (const mode of ['light', 'dark']) {
+  const glass = value('--dsw-menu-surface-fill', mode)
+  const base = value('--dsw-alias-bg-base', mode)
+  const surface = composite(glass, base)
+  const label = mode === 'light' ? '浅色' : '深色'
+  if (surface === null) {
+    console.log(`     n/a  ${label} 玻璃面（${glass} 叠 ${base}：非 hex，跳过）`)
+    continue
+  }
+  for (const [name, kind] of [
+    ['--dsw-alias-label-primary', 'text'],
+    ['--dsw-alias-label-secondary', 'text'],
+    ['--dsw-alias-label-caption', 'caption'],
+  ]) {
+    const ratio = contrast(value(name, mode), surface)
+    const text = ratio.toFixed(2).padStart(6)
+    const row = `${label} ${name.replace('--dsw-alias-', '')} / ${surface}`
+    if (ratio >= 4.5) {
+      console.log(`${text}  OK      ${row}`)
+      pass++
+    } else if (kind === 'caption') {
+      console.log(`${text}  弱化    ${row}（caption 刻意低对比）`)
+    } else {
+      console.log(`${text}  FAIL    ${row}`)
+      failures++
+    }
+  }
+}
+
+// ── 2c. 焦点环：AA 1.4.11 要求非文字元素 ≥ 3:1 ────────────────────────────────
+// 键盘焦点环的颜色走官方 focus.css 的 fallback（--dsw-focus-ring-color 未定义时取
+// --dsw-alias-state-business-primary），所以这里校验的是强调色本身。
+console.log('\n焦点环（非文字门槛 3:1）：')
+for (const mode of ['light', 'dark']) {
+  const label = mode === 'light' ? '浅色' : '深色'
+  for (const bgName of ['--dsw-alias-bg-base', '--dsw-alias-bg-layer-2', '--dsw-specific-sidebar-fill']) {
+    const ratio = contrast(value('--dsw-alias-state-business-primary', mode), value(bgName, mode))
+    const row = `${label} 焦点环 / ${bgName.replace('--dsw-', '')}`
+    const text = ratio === null ? '   n/a' : ratio.toFixed(2).padStart(6)
+    if (ratio !== null && ratio >= 3) {
+      console.log(`${text}  OK      ${row}`)
+      pass++
+    } else {
+      console.log(`${text}  FAIL    ${row}`)
+      failures++
+    }
   }
 }
 
@@ -160,6 +203,7 @@ for (const mode of ['light', 'dark']) {
     }
     if (ratio >= 4.5) {
       console.log(`${ratio.toFixed(2).padStart(6)}  OK      ${mode} ${name}`)
+      pass++
     } else {
       console.log(`${ratio.toFixed(2).padStart(6)}  FAIL    ${mode} ${name}`)
       failures++
@@ -174,15 +218,6 @@ for (const mode of ['light', 'dark']) {
 //   ① 不允许类选择器（哈希类名升级即失效，普通类名我们也用不着）；
 //   ② 不允许 !important。
 // 顺带校验大括号/圆括号配平，避免字符串拼错导致样式静默失效。
-function extractCssLayer(text) {
-  const start = text.indexOf('const CSS_LAYER = [')
-  if (start === -1) return null
-  const open = text.indexOf('[', start)
-  const end = text.indexOf('].join("")', open)
-  if (end === -1) throw new Error('CSS_LAYER 数组没有以 ].join("") 收尾')
-  return new Function(`return ${text.slice(open, end + 1)}.join("")`)()
-}
-
 const css = extractCssLayer(source)
 console.log('\n样式层（3D）自检：')
 if (css === null) {
@@ -204,8 +239,14 @@ if (css === null) {
   console.log(`  样式层长度：${css.length} 字符`)
 }
 
+// ── 5. 刻意项：这些不达标是设计决定，理由必须在代码里写明 ────────────────────
+console.log('\n刻意项（不参与上面的门槛，改动前先读注释）：')
+console.log('  - --dsw-alias-label-caption / --shiki-token-comment：说明文字与注释的弱化档')
+console.log('  - 错误 / 警告 / 成功 / diff 色相：语义色保持官方值，不绿化')
+console.log('  - 静态色阶 --dsw-static-neutral-00：作为 color-mix 的提亮基色，保持纯白')
+
 if (failures > 0) {
-  console.error(`\n${failures} 组对比度不达标。`)
+  console.error(`\n${failures} 项不达标。`)
   process.exit(1)
 }
-console.log('\n全部通过。')
+console.log(`\n全部通过（${pass} 项对比度达标）。`)
