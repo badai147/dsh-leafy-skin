@@ -4,6 +4,56 @@ All notable changes to dsh-leafy-skin are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] - 2026-10-20
+
+The theme of this release is "closing the gaps": turn "which corners still show the official
+blue/grey" from folklore into a measurable matrix, then fill what the matrix proves.
+
+### Added
+
+- **Token coverage matrix** — `tools/audit-tokens.mjs` reads the installed DSH: every `--dsw-*`
+  token the official stylesheets declare, its light/dark value, whether this skin covers it
+  directly or through a `var()` chain, and how many times the official bundles actually consume
+  it. `--strict` fails on a token that is used but neither covered nor exempted with a reason.
+- **Stable-hook check** — `tools/check-hooks.mjs` extracts the `data-*` hooks the style layer
+  relies on from `lib/client.js` and looks them up in the installed bundles, including the
+  composed `dsh-web-frontend` build. An upstream JSX rename now fails loudly instead of
+  silently disabling rules.
+- **Manifest check and CI** — `tools/check-manifest.mjs` and `.github/workflows/check.yml` guard
+  the version numbers (both changelogs and both README compatibility tables), the `files` list,
+  entry points, icon size, and heading parity between the English and Chinese docs.
+
+### Changed
+
+- **Grey scale goes green (option A)** — `--dsw-static-neutral-50` through `-1000` now map onto
+  the leafy grey ladder. These statics are absolute by contract (one value for both modes), so
+  each maps to a single green-grey value rather than a light/dark pair, preserving "which step
+  is darker". Consumers: the deliverables / plan / schedule cards (light 50/100, dark 850/800),
+  their 40px icon tiles, and the right-sidebar empty-state icon.
+- **Hard-coded leftovers** — `--dsw-alias-brand-primary-new-colorprimary-new-color` (light mode
+  hard-codes `#4176e6`; used by the desktop-update badge in Settings, the account page and the
+  trajectory rail) now follows the brand green; `--dsw-alias-label-shimmer` drops pure black and
+  white for green ink and mint white; the drag-and-drop overlay `--dsw-alias-bg-mask-drop` loses
+  its blue-grey dark value; `--dsw-alias-bg-skeleton` loses its pure black/white alpha.
+- **`--dsw-static-blue-500`** follows the accent family: its remaining consumer is the
+  trajectory turn highlight (document selection is overridden separately). The other blue steps
+  stay cold because they are categorical chart colours.
+
+### Fixed
+
+- **First-frame colour** — the host boot CSS used `#F1F6ED` / `#131A12` while the token layer
+  paints `#EDF3E6` / `#121810`, so the first frame shifted a notch. A self-check now enforces
+  that the two are equal.
+- **Two more contrast tiers** — translucent glass surfaces (menus at 58% / 50%) are composited
+  onto the canvas before text contrast is measured, and the focus ring is verified against the
+  AA 1.4.11 non-text threshold of 3:1.
+
+### Documentation
+
+- `AGENTS.md` gains the coverage policy (four categories plus the exemption rule), the three new
+  tool commands, and pitfalls: statics are absolute colours, only cover tokens that have
+  consumers, and hooks may only exist in the composed build.
+
 ## [0.1.2] - 2026-10-17
 
 ### Added

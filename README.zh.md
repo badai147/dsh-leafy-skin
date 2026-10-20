@@ -10,6 +10,7 @@
 
 | 插件版本 | DSH 版本 |
 | --- | --- |
+| v0.2.0 | dsh-v0.2.1-rc.2 |
 | v0.1.2 | dsh-v0.2.1-rc.2 |
 | v0.1.1 | dsh-v0.2.0-rc.2 |
 | v0.1.0 | dsh-v0.2.0-rc.2 |
@@ -46,8 +47,13 @@ dsh plugin --profile web add dsh-leafy-skin
 - **颜色**——`lib/client.js` 里的 `TOKENS` 表，按部位分组并带注释。
 - **圆角、阴影、字体、动效**——同一个文件，以及它下面的那一小块样式层。
 - **只想要调色板**——把 `lib/client.js` 里的 `ENABLE_CSS_LAYER` 改成 `false`，样式层整个关掉。
-- **改完自检**——`node tools/check-palette.mjs` 会校验 token 形状、文字与语法高亮的对比度，
-  以及样式层的三条约束。
+- **改完自检**——`node tools/check-palette.mjs` 校验 token 形状、首帧色一致、文字与语法高亮
+  对比度（含半透明玻璃面合成与焦点环），以及样式层的三条约束。
+- **覆盖矩阵**——`node tools/audit-tokens.mjs` 读已安装的 DSH，列出它声明的每个 `--dsw-*`
+  token：本皮肤是直接覆盖还是经 `var()` 链派生，官方 bundle 实际消费了多少次。`--strict`
+  会让「有消费、却既没覆盖也没写豁免理由」的 token 失败。
+- **稳定钩子**——`node tools/check-hooks.mjs` 确认样式层依赖的 `data-*` 钩子在上游还在，
+  这样 DSH 升级时坏的是自检，不是观感。
 
 ## 卸载
 

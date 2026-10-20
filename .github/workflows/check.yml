@@ -1,0 +1,39 @@
+# 每次推送或手动触发时跑只读自检：不安装依赖、不构建、不发布。
+#
+# 四个脚本的分工：
+#   check-palette   形状 / 首帧一致 / 对比度（含玻璃面合成与焦点环）/ 样式层三约束
+#   check-manifest  版本号、files 清单、入口文件、图标体积、中英文文档结构
+#   audit-tokens    token 覆盖矩阵（CI 上没有 DSH 安装，会自动跳过）
+#   check-hooks     稳定钩子存在性（同上，自动跳过）
+name: Check
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Palette and contrast
+        run: node tools/check-palette.mjs
+
+      - name: Manifest and docs
+        run: node tools/check-manifest.mjs
+
+      - name: Token coverage matrix
+        run: node tools/audit-tokens.mjs --strict
+
+      - name: Stable hooks
+        run: node tools/check-hooks.mjs

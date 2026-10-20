@@ -11,6 +11,7 @@ light emerald and a dark mint variant.
 
 | Plugin version | DSH version |
 | --- | --- |
+| v0.2.0 | dsh-v0.2.1-rc.2 |
 | v0.1.2 | dsh-v0.2.1-rc.2 |
 | v0.1.1 | dsh-v0.2.0-rc.2 |
 | v0.1.0 | dsh-v0.2.0-rc.2 |
@@ -52,8 +53,15 @@ and follow-system each pick up their own variant automatically.
 - **Radii, shadows, fonts, motion** — the same file, plus the small style layer below it.
 - **Palette only** — set `ENABLE_CSS_LAYER` to `false` in `lib/client.js` to drop the style layer
   entirely.
-- **Check your work** — `node tools/check-palette.mjs` validates token shape, text and syntax
-  contrast, and the style layer's three constraints.
+- **Check your work** — `node tools/check-palette.mjs` validates token shape, the boot colour
+  match, text and syntax contrast (including translucent surfaces and the focus ring), and the
+  style layer's three constraints.
+- **Coverage matrix** — `node tools/audit-tokens.mjs` reads the installed DSH and lists every
+  `--dsw-*` token it declares: whether this skin covers it directly or through a `var()` chain,
+  and how often official bundles consume it. `--strict` fails on tokens that are used but covered
+  by neither the palette nor a written reason.
+- **Stable hooks** — `node tools/check-hooks.mjs` confirms the `data-*` hooks the style layer
+  relies on still exist upstream, so a DSH upgrade breaks the check instead of the look.
 
 ## Uninstall
 

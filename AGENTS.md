@@ -37,17 +37,46 @@ DSH Web GUI 的**护眼绿叶皮肤插件**：在**当前主题之上**叠一层
 7. **保持零构建**：不加依赖、构建步骤或外置资源。样式内联成字符串是刻意的（官方 ui-theme 也这么干），
    外置 `.css` 需要打包/取资源，违反此约束。
 
+## 覆盖策略（v0.2.0 起）
+
+皮肤是叠加层，问题从来不是"颜色不好看"，而是**某处组件读了写死的灰/蓝，我们以为它会跟着
+色阶变**。所以每个 token 必须落进四类之一，由 `tools/audit-tokens.mjs` 机械核对：
+
+1. **色阶派生**——改官方色阶，别名自动跟着变（占大多数，工具里显示 `derived`）。
+2. **别名显式覆盖**——一个色阶被两种角色共用、或官方在别名上写死值时拆开覆盖。
+3. **语义色保留**——错误 / 警告 / 成功 / diff 的色相；进 `EXEMPT` 并写明理由。
+4. **结构不覆盖**——字号、圆角几何、动效曲线、遮罩的纯黑 alpha；同样进 `EXEMPT`。
+
+两条纪律：**只补有消费者的 token**（用量 0 的先不补，如 `button-tool-bar-*`）；**新增豁免
+必须写清"为什么这是对的"**，不许为了过 CI 随手加。
+
+静态灰阶（`--dsw-static-neutral-*`）按方案 A 绿化：它是官方定义的"绝对色"（浅深同值，组件
+自己按主题挑号），所以覆盖时浅深两档写**同一个绿灰值**，只换色相、不改深浅排序。
+
 ## 命令
 
 ```powershell
-# 必跑的自检（改完就跑，别靠肉眼）：token 形状、20 组文字/底色 + 18 组语法高亮对比度、
-# 样式层三条约束（括号配平 / 无 !important / 无类选择器）
+# 必跑的自检（改完就跑，别靠肉眼）：token 形状、首帧色一致、文字/语法高亮对比度
+# （含玻璃面合成与焦点环 3:1）、样式层三条约束（括号配平 / 无 !important / 无类选择器）
 node tools/check-palette.mjs
+
+# 覆盖矩阵：读已安装的 DSH，列出官方声明的每个 token 与真实用量；--strict 用于 CI
+node tools/audit-tokens.mjs
+node tools/audit-tokens.mjs --strict
+
+# 稳定钩子：样式层用到的 data-* 是否还在官方 bundle（含 dsh-web-frontend 的 dist）
+node tools/check-hooks.mjs
+
+# 发布清单：版本号（两份 CHANGELOG + 两份 README 兼容表）、files、入口、图标体积、文档结构
+node tools/check-manifest.mjs
 
 # 安装到 desktop profile（写入 dependencies 与 dsh.profile.bundles）
 & "$env:LOCALAPPDATA\Programs\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd" `
   plugin --profile desktop add C:\Users\badai\projects2\dsh-leafy-skin
 ```
+
+后两个「读已安装 DSH」的脚本用 `tools/asar.mjs` 直接解析 `app.asar`（Windows 默认安装位，
+可用 `DSH_ASAR` 或 `--asar` 覆盖）；没装 DSH 的环境（比如 CI）会打印跳过并以 0 退出。
 
 停用见 README 的卸载章节（注释 `cordis.patch.yml` 的 `insert` 行 / 从 profile 的
 `dsh.profile.bundles` 删掉 / `dsh plugin --profile <profile> remove`），三条都需重启。
@@ -95,6 +124,23 @@ node tools/check-palette.mjs
   文件（`{ meta: { title, description } }`）。locale 文件必须从 `exports` 导出
   （`./locale/*.json`），否则读取会失败；还得写进 `files`，否则 npm 包里没有。标题缺省回退包名，
   描述回退 `package.json` 的 `description`。改图标/文案只需动清单与 locale，别去客户端注入。
+- **静态色阶是"绝对色"，覆盖时浅深写同值**：`--dsw-static-neutral-*` 官方只有一份值，组件
+  自己按主题挑号用（浅色卡片用 50/100，深色同一处换 850/800；`neutral-00` 在深色里当 5% 白
+  提亮）。所以覆盖时**两档写同一个绿灰**；写成 light/dark 两档会让深色里的"提亮"变成"压暗"。
+- **只改 `--dsw-static-blue-500`，别动整族蓝**：其余蓝阶是上下文占用表的分类型配色
+  （blue-450 是 messages 段），改了分段就分不清；blue-500 剩下的消费只有轨迹面板的回合强调
+  （文档选区我们已单独覆盖）。
+- **稳定钩子可能只存在于组合构建里**：`data-dockkit-strip` 只出现在
+  `dsh-web-frontend/dist/assets/*.js`，源码 `lib/client.js` 里没有。`tools/check-hooks.mjs`
+  因此扫 `lib` + `dist`；只扫源码会误报失效。
+- **首帧色没有共享模块**：Host 的 `lib/index.js` 是 ESM，客户端是手写模块工厂，两边不能
+  import。`LIGHT_BG` / `DARK_BG` 只能靠 `tools/check-palette.mjs` 钉住与
+  `--dsw-alias-bg-base` 相等——改画布色时两处一起改，别只改一处。
+- **`--dsw-focus-ring-color` 不是"没颜色的环"**：它只在 pointer 模态下被官方设成
+  `transparent`，颜色实际走 `focus.css` 的 fallback `--dsw-alias-state-business-primary`
+  （我们已经把它改绿）。所以焦点环不用覆盖，别被审计工具里的 `transparent` 骗到。
+- **只补有消费者的 token**：官方声明 430 个 `--dsw-*`，其中大量当前用量为 0（如
+  `button-tool-bar-*`）。先跑 `audit-tokens.mjs` 看用量再决定，别凭"名字像颜色"就补一堆。
 
 ## 提交约定
 
