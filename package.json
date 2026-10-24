@@ -1,6 +1,6 @@
 {
   "name": "dsh-leafy-skin",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Leafy — an eye-friendly green skin that folds the DSH Web GUI's --dsw-* palette into leafy greens (light + dark).",
   "type": "module",
   "main": "lib/index.js",

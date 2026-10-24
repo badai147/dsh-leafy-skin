@@ -9,6 +9,7 @@
 //      第一帧会比皮肤挂载后偏一档，肉眼能看到跳变。
 //   3) 对比度复核：按 WCAG 2.1 相对亮度算关键「文字 / 底色」组合——包括把半透明
 //      玻璃面先合成到底色上的组合，以及焦点环这类非文字元素（AA 门槛 3:1）。
+//      另加一条非 WCAG 的设计门槛：行内代码底色与画布的可见性（≥ 1.10:1）。
 //   4) 样式层三条约束：括号配平 / 无 !important / 无类选择器。
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -89,6 +90,7 @@ const PAIRS = [
   ['浅色 正文 / 侧栏', '--dsw-alias-label-primary', '--dsw-specific-sidebar-fill', 'text'],
   ['浅色 正文 / 气泡', '--dsw-alias-label-primary', '--dsw-specific-bubble', 'text'],
   ['浅色 正文 / 代码块', '--dsw-alias-label-primary', '--dsw-alias-markdown-code-block', 'text'],
+  ['浅色 正文 / 行内代码', '--dsw-alias-label-primary', '--dsw-alias-markdown-inline-code', 'text'],
   ['浅色 链接 / 画布', '--dsw-static-deepseek-500', '--dsw-alias-bg-base', 'text'],
   ['浅色 按钮字 / 主按钮', '--dsw-static-neutral-bluish-00', '--dsw-alias-brand-primary', 'text'],
   ['深色 正文 / 画布', '--dsw-alias-label-primary', '--dsw-alias-bg-base', 'text'],
@@ -99,6 +101,7 @@ const PAIRS = [
   ['深色 正文 / 侧栏', '--dsw-alias-label-primary', '--dsw-specific-sidebar-fill', 'text'],
   ['深色 正文 / 气泡', '--dsw-alias-label-primary', '--dsw-specific-bubble', 'text'],
   ['深色 正文 / 代码块', '--dsw-alias-label-primary', '--dsw-alias-markdown-code-block', 'text'],
+  ['深色 正文 / 行内代码', '--dsw-alias-label-primary', '--dsw-alias-markdown-inline-code', 'text'],
   ['深色 链接 / 画布', '--dsw-static-deepseek-400', '--dsw-alias-bg-base', 'text'],
   ['深色 按钮字 / 主按钮', '--dsw-static-neutral-bluish-1000', '--dsw-alias-brand-primary', 'text'],
 ]
@@ -176,6 +179,24 @@ for (const mode of ['light', 'dark']) {
       console.log(`${text}  FAIL    ${row}`)
       failures++
     }
+  }
+}
+
+// ── 2d. 行内代码可见性：不是 WCAG 门槛，是"能不能看出这是个 chip"的下限 ────────
+// 官方只给行内代码 .5px、4% 黑的描边，合成后对画布约 1.1:1，等于没有边；可见性
+// 几乎全压在底色上。旧值 #E7F0E0 只有 1.04:1，读起来就是"正文换了个等宽字体"，
+// 所以这里把「底色 / 画布」钉在 1.10 以上（当前 1.12 / 1.31）。
+console.log('\n行内代码可见性（设计门槛 1.10:1，非 WCAG）：')
+for (const mode of ['light', 'dark']) {
+  const label = mode === 'light' ? '浅色' : '深色'
+  const ratio = contrast(value('--dsw-alias-markdown-inline-code', mode), value('--dsw-alias-bg-base', mode))
+  const text = ratio === null ? '   n/a' : ratio.toFixed(3).padStart(6)
+  if (ratio !== null && ratio >= 1.1) {
+    console.log(`${text}  OK      ${label} 行内代码底 / 画布`)
+    pass++
+  } else {
+    console.log(`${text}  FAIL    ${label} 行内代码底 / 画布（低于 1.10 就看不出是代码）`)
+    failures++
   }
 }
 

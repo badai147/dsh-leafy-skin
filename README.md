@@ -11,6 +11,7 @@ light emerald and a dark mint variant.
 
 | Plugin version | DSH version |
 | --- | --- |
+| v0.2.1 | dsh-v0.2.1-rc.2 |
 | v0.2.0 | dsh-v0.2.1-rc.2 |
 | v0.1.2 | dsh-v0.2.1-rc.2 |
 | v0.1.1 | dsh-v0.2.0-rc.2 |

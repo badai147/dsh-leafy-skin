@@ -141,6 +141,11 @@ node tools/check-manifest.mjs
   （我们已经把它改绿）。所以焦点环不用覆盖，别被审计工具里的 `transparent` 骗到。
 - **只补有消费者的 token**：官方声明 430 个 `--dsw-*`，其中大量当前用量为 0（如
   `button-tool-bar-*`）。先跑 `audit-tokens.mjs` 看用量再决定，别凭"名字像颜色"就补一堆。
+- **行内代码的可见性全压在 token 上，样式层抢不动**：官方 `._markdown :not(pre)>code` 把背景、
+  `.5px` 描边、圆角、内边距写死在一条 `(0,1,2)` 特异性的规则里，字号还带 `!important`；零特异性
+  的样式层只能补它没写的 `box-shadow` / `color`。那条描边是 `--dsw-alias-border-l1`（浅色 4% 黑），
+  0.5px 下合成出来对画布只有 1.11:1，等于没有——所以底色必须自己拉开（现在 1.12:1，`check-palette`
+  守住 1.10 下限），再用 1px 内环补边界。`:not(pre)` 不能省，否则代码块里的 `<code>` 会被框住整块。
 
 ## 提交约定
 

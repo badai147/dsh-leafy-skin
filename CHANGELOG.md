@@ -4,6 +4,12 @@ All notable changes to dsh-leafy-skin are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [0.2.1] - 2026-10-24
+
+### Fixed
+
+- Fix inline code being nearly invisible on the green canvas by deepening its fill and adding a thin inset ring.
+
 ## [0.2.0] - 2026-10-20
 
 This release turns "which corners still show the official blue or grey" into a measurable
